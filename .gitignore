@@ -1,0 +1,6 @@
+site/
+__pycache__/
+.DS_Store
+# Internal docs stay out of the public repo (ops notes live in the
+# private jarvis repo: docs/CWJC-OPERATIONS.md).
+README.md

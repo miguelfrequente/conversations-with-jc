@@ -1,0 +1,254 @@
+/* My Conversations with JC — locked design (2026-07-17): "Editorial Print".
+   Warm paper, serif voice, hairline masthead, typeset dialogue cards,
+   real-face avatars, reading-band spotlight, returning header, auto dark
+   mode, fully responsive. Fonts are system-serif for now; a self-hosted
+   WOFF2 face (Fraunces/Newsreader class) is the planned upgrade — never a
+   font CDN (GDPR). */
+
+:root {
+  --bg: #faf7f2;
+  --ink: #2a251d;
+  --muted: #7a6f60;
+  --petrol: #1b5a6e;
+  --petrol-ink: #1b5a6e;
+  --jc-bubble: #eef3f6;
+  --jc-ink: #22343e;
+  --m-bubble: #eff5e9;
+  --m-ink: #263a1c;
+  --line: #ddd3c4;
+  --focus-dim: 0.45;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #191512;
+    --ink: #e8dfd2;
+    --muted: #a19582;
+    --petrol: #7fb4c4;
+    --petrol-ink: #7fb4c4;
+    --jc-bubble: #232d33;
+    --jc-ink: #cfdfe8;
+    --m-bubble: #242e1e;
+    --m-ink: #d5e4c8;
+    --line: #3a332a;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 18px/1.7 "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  /* Sticky footer: main grows, footer rides the true bottom. */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main { flex: 1 0 auto; width: 100%; max-width: 780px; margin: 0 auto; padding: 1.5rem clamp(1rem, 4vw, 2rem) 0; }
+
+/* --- masthead + footer ------------------------------------------------------ */
+.banner {
+  background: var(--bg);
+  color: var(--petrol-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.6rem clamp(1rem, 4vw, 3rem) 1.2rem;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.banner a { color: var(--petrol-ink); text-decoration: none; }
+.banner a:hover { text-decoration: underline; }
+.site-title { font-size: 1.6rem; font-style: italic; font-weight: 600; letter-spacing: 0.005em; }
+.banner nav {
+  display: flex;
+  gap: 1.5rem;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+/* Substack-style header: sticks to the top, hides while scrolling down,
+   reappears the moment you scroll up (script toggles .nav-hidden). */
+header.banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  transition: transform 0.25s ease;
+}
+header.banner.nav-hidden { transform: translateY(-100%); }
+@media (prefers-reduced-motion: reduce) {
+  header.banner { transition: none; }
+}
+
+.footer {
+  margin-top: 4rem;
+  background: var(--bg);
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  border-bottom: none;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  justify-content: center;
+  gap: 2rem;
+}
+.footer a { color: var(--muted); }
+
+/* --- piece head ------------------------------------------------------------- */
+/* Date sits ABOVE the title (nav.al-style eyebrow). */
+.piece-head time {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.piece-head h1 { margin: 0; font-size: 2.1rem; font-weight: 600; letter-spacing: -0.01em; }
+.piece-head time, .idx-date { color: var(--muted); }
+.idx-date { font-size: 0.9rem; }
+.piece-head { margin-bottom: 1.75rem; }
+
+/* Lede: the piece's essence (frontmatter tldr), unlabeled. */
+.lede {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  margin: -0.75rem 0 2rem;
+}
+
+/* --- fixed edge navigation --------------------------------------------------- */
+.edge-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  color: var(--muted);
+  text-decoration: none;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+}
+.edge-nav:hover { color: var(--ink); }
+.nav-prev { left: clamp(0.75rem, 2.5vw, 2rem); }
+.nav-next { right: clamp(0.75rem, 2.5vw, 2rem); text-align: right; }
+.edge-arrow { display: block; font-size: 1.2rem; }
+
+@media (max-width: 980px) {
+  .edge-label { display: none; }
+  .edge-nav {
+    background: var(--petrol);
+    color: var(--bg);
+    width: 2.4rem; height: 2.4rem;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    opacity: 0.85;
+  }
+  .edge-nav:hover { color: var(--bg); opacity: 1; }
+  .edge-arrow { font-size: 1.1rem; }
+  .nav-prev { left: 0.5rem; }
+  .nav-next { right: 0.5rem; }
+}
+
+/* --- dialogue ---------------------------------------------------------------- */
+.dialogue { display: flex; flex-direction: column; gap: 1.35rem; }
+
+.turn { display: flex; align-items: flex-start; gap: 0.65rem; }
+.turn-m { flex-direction: row-reverse; }
+
+.avatar {
+  flex: 0 0 auto;
+  width: 2.4rem; height: 2.4rem;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 0.8rem; font-weight: 700;
+  margin-top: 0.2rem;
+}
+/* Real faces inside the circles; the letter stays in the markup as a
+   no-CSS fallback (color:transparent hides it over the photo). */
+.avatar-jc {
+  background: url("/assets/avatar-jc.jpg") center / cover no-repeat, var(--jc-bubble);
+  color: transparent;
+  border: 1px solid var(--line);
+}
+.avatar-m {
+  background: url("/assets/avatar-m.jpg") center / cover no-repeat, var(--m-bubble);
+  color: transparent;
+  border: 1px solid var(--line);
+}
+
+/* Typeset dialogue cards: quiet fills, hairlines, modest rounding. */
+.bubble {
+  border-radius: 0.6rem;
+  border: 1px solid var(--line);
+  padding: 1rem 1.25rem;
+  max-width: 82%;
+  transition: opacity 0.35s ease;
+}
+.bubble p { margin: 0 0 0.7em; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble-jc { background: var(--jc-bubble); color: var(--jc-ink); }
+.bubble-m  { background: var(--m-bubble);  color: var(--m-ink); }
+.bubble code { font-size: 0.88em; background: rgba(0,0,0,0.08); padding: 0.1em 0.35em; border-radius: 0.3em; }
+
+/* Reading-band spotlight (script marks .in-focus; no-JS = full alpha). */
+html.js .dialogue .bubble { opacity: var(--focus-dim); }
+html.js .dialogue .turn.in-focus .bubble { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .bubble { transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+.narration {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 1.02rem;
+  margin: 0.25rem 0;
+  text-align: center;
+}
+
+/* --- related trail ------------------------------------------------------------ */
+.related { margin-top: 3.5rem; border-top: 1px solid var(--line); padding-top: 1.5rem; }
+.related h2 {
+  margin: 0 0 1rem;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.related ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.65rem; }
+.related a { text-decoration: none; color: var(--ink); }
+.related a:hover .rel-title { text-decoration: underline; }
+.rel-date {
+  color: var(--muted);
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- index --------------------------------------------------------------------- */
+.index { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 1.4rem; }
+.index a { text-decoration: none; color: var(--ink); display: block; }
+.idx-title { display: block; font-size: 1.2rem; font-weight: 600; }
+.idx-title:hover { text-decoration: underline; }
+.idx-tldr { margin: 0.25rem 0 0; color: var(--muted); font-style: italic; }
+
+/* --- mobile ---------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  body { font-size: 16.5px; }
+  .piece-head h1 { font-size: 1.7rem; }
+  .bubble { max-width: 88%; }
+  .avatar { width: 2rem; height: 2rem; font-size: 0.7rem; }
+  .banner nav { gap: 1rem; }
+  .footer { flex-direction: column; gap: 0.4rem; text-align: center; }
+}
