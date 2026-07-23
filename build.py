@@ -48,6 +48,15 @@ BASE_URL = f"https://{DOMAIN}"      # canonical URLs, RSS links, OG tags
 CONTACT = f"contact@{DOMAIN}"
 X_URL = "https://x.com/cwjc108"     # syndication account (live 2026-07-23)
 
+# Official X logo glyph (x.com brand assets, 24x24 path), inlined — the CSP
+# allows no external assets. currentColor inherits the nav's petrol + hover.
+_X_LOGO_SVG = (
+    '<svg class="x-logo" viewBox="0 0 24 24" aria-hidden="true">'
+    '<path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 '
+    "11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 "
+    '6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'
+)
+
 # --- tiny markdown subset ------------------------------------------------------
 
 _INLINE_CODE = re.compile(r"`([^`]+)`")
@@ -190,7 +199,7 @@ def shell(*, title: str, description: str, content: str, canonical: str = "") ->
   <a class="site-title" href="/">{html.escape(SITE_TITLE)}</a>
   <nav>
     <a href="/conversations/">All conversations</a>
-    <a href="{X_URL}" rel="me noopener">X</a>
+    <a href="{X_URL}" rel="me noopener" target="_blank" aria-label="My Conversations with JC on X">{_X_LOGO_SVG}</a>
   </nav>
 </header>
 <main>

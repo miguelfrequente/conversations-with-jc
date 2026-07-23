@@ -65,12 +65,14 @@ main { flex: 1 0 auto; width: 100%; max-width: 780px; margin: 0 auto; padding: 1
 .site-title { font-size: 1.6rem; font-style: italic; font-weight: 600; letter-spacing: 0.005em; }
 .banner nav {
   display: flex;
+  align-items: center;
   gap: 1.5rem;
   font-family: -apple-system, "Segoe UI", sans-serif;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
 }
+.banner nav .x-logo { width: 1em; height: 1em; display: block; }
 
 /* Substack-style header: sticks to the top, hides while scrolling down,
    reappears the moment you scroll up (script toggles .nav-hidden). */
