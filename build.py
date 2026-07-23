@@ -46,6 +46,7 @@ SITE_TITLE = "My Conversations with JC"
 DOMAIN = "conversationswithjc.com"  # bought 2026-07-17
 BASE_URL = f"https://{DOMAIN}"      # canonical URLs, RSS links, OG tags
 CONTACT = f"contact@{DOMAIN}"
+X_URL = "https://x.com/cwjc108"     # syndication account (live 2026-07-23)
 
 # --- tiny markdown subset ------------------------------------------------------
 
@@ -189,6 +190,7 @@ def shell(*, title: str, description: str, content: str, canonical: str = "") ->
   <a class="site-title" href="/">{html.escape(SITE_TITLE)}</a>
   <nav>
     <a href="/conversations/">All conversations</a>
+    <a href="{X_URL}" rel="me noopener">X</a>
   </nav>
 </header>
 <main>
