@@ -105,8 +105,14 @@ def render_dialogue(body: str) -> str:
 
     for block in blocks:
         text = block.strip()
-        m = re.match(r"\*\*(JC|M|Mike)\s*:?\*\*\s*:?\s*(.*)", text, re.DOTALL | re.IGNORECASE)
-        if m:
+        m = re.match(r"\*\*(JC|M|Mike|N)\s*:?\*\*\s*:?\s*(.*)", text, re.DOTALL | re.IGNORECASE)
+        if m and m.group(1).upper() == "N":
+            # **N:** — the narrator's voice, anywhere in the flow. It ends
+            # the current bubble; following unmarked blocks stay narration
+            # (current=None routes them to the narration branch below).
+            flush()
+            out.append(f'<p class="narration">{_inline(m.group(2).strip())}</p>')
+        elif m:
             flush()
             css, label = _SPEAKERS[m.group(1).upper()]
             current = (css, label)
@@ -138,7 +144,16 @@ class Piece:
             if not meta.get(required):
                 raise ValueError(f"{path.name}: missing frontmatter field {required!r}")
         self.title = meta["title"]
+        # `date` is the PUBLICATION date — it orders the site, fills the feed,
+        # and decides what the home page shows. The day the exchange actually
+        # happened is `conversation` (optional): an archive piece from March
+        # published in July is a July publication about a March conversation,
+        # and the page says both (2026-08-03).
         self.date = dt.date.fromisoformat(meta["date"])
+        self.conversation = (
+            dt.date.fromisoformat(meta["conversation"])
+            if meta.get("conversation") else None
+        )
         self.tldr = meta["tldr"]
         self.status = meta["status"]
         self.slug = path.stem
@@ -176,7 +191,15 @@ def _asset_version() -> str:
 _ASSET_V = None  # computed once per build in main()
 
 
-def shell(*, title: str, description: str, content: str, canonical: str = "") -> str:
+def shell(
+    *, title: str, description: str, content: str, canonical: str = "",
+    main_class: str = "",
+) -> str:
+    """`main_class="full"` drops the text-column constraint so a page can
+    alternate full-width bands with `.column` sections — the about page's
+    banner sits between two voices and must span the page. Doing that from
+    inside the column would need a 100vw breakout, which adds the
+    scrollbar's width and hands every desktop a horizontal scrollbar."""
     canonical_tag = (
         f'\n  <link rel="canonical" href="{BASE_URL}{canonical}">' if BASE_URL and canonical else ""
     )
@@ -199,10 +222,11 @@ def shell(*, title: str, description: str, content: str, canonical: str = "") ->
   <a class="site-title" href="/">{html.escape(SITE_TITLE)}</a>
   <nav>
     <a href="/conversations/">All conversations</a>
+    <a href="/about/">About</a>
     <a href="{X_URL}" rel="me noopener" target="_blank" aria-label="My Conversations with JC on X">{_X_LOGO_SVG}</a>
   </nav>
 </header>
-<main>
+<main{f' class="{main_class}"' if main_class else ""}>
 {content}
 </main>
 <footer class="banner footer">
@@ -236,9 +260,20 @@ def render_piece_page(
         )
 
     # Date ABOVE the title, nav.al-style: quiet eyebrow, then the headline.
+    # The eyebrow carries the publication date; when the conversation
+    # happened on another day, that day is named too — the archive pieces
+    # would otherwise read as if they were spoken the week they went out.
+    convo = ""
+    if piece.conversation and piece.conversation != piece.date:
+        convo = (
+            f'<span class="convo-date">from a conversation on '
+            f'<time datetime="{piece.conversation.isoformat()}">'
+            f'{piece.conversation.strftime("%B %d, %Y")}</time></span>'
+        )
     heading = (
         f'<div class="piece-head">'
         f'<time datetime="{piece.date.isoformat()}">{piece.date.strftime("%B %d, %Y")}</time>'
+        f"{convo}"
         f"<h1>{html.escape(piece.title)}</h1></div>"
     )
     # The tldr renders as an unlabeled lede — the essence in a sentence or
@@ -275,6 +310,83 @@ def render_index_page(pieces: list[Piece]) -> str:
         for p in reversed(pieces)  # newest first
     )
     return f'<div class="piece-head"><h1>All conversations</h1></div><ul class="index">{items or "<li>Nothing published yet.</li>"}</ul>'
+
+
+# One picture, cut across its middle, with the page read through the cut —
+# so each half describes its own part AND says where it stands. Marking the
+# closing half decorative (alt="") would have left a screen reader walking
+# past the page's whole visual argument in silence (Mike, 2026-08-14).
+ABOUT_HERO_ALT = {
+    "top": (
+        "Upper half of a portrait split down the middle: Mike's face on the "
+        "left, a Shiva figure on the right, both dissolving into falling "
+        "code. The picture continues below the text."
+    ),
+    "bottom": (
+        "Lower half of the same portrait, closing the page: a shirt collar "
+        "on the left, a rudraksha strand and dark robe on the right, the "
+        "code still falling."
+    ),
+}
+
+
+def _about_blocks(text: str) -> str:
+    """Paragraphs of the page. `> ` becomes the closing kicker, a short
+    em-dash line the signature — both are how the source text already
+    reads, so ABOUT.md stays a document rather than a template. A rule
+    line separates the two voices in the source and renders as nothing:
+    both accounts are set in the same type (Mike, 2026-08-13)."""
+    out = []
+    for block in re.split(r"\n\s*\n", text.strip()):
+        b = block.strip()
+        if not b or re.fullmatch(r"-{3,}", b):
+            continue
+        if b.startswith("> "):
+            out.append(f'<p class="about-kicker">{_inline(b[2:].strip())}</p>')
+        elif b.startswith("—") and len(b) < 40:
+            out.append(f'<p class="about-sign">{_inline(b)}</p>')
+        else:
+            out.append(f"<p>{_inline(b)}</p>")
+    return "\n".join(out)
+
+
+def render_about_hero(part: str) -> str:
+    """One half of the portrait as a full-width band.
+
+    The picture is cut across its middle: the top half opens the page, the
+    bottom half closes it, and the text is read THROUGH the image (Mike,
+    2026-08-14). Both halves are described — see ABOUT_HERO_ALT.
+    """
+    alt = html.escape(ABOUT_HERO_ALT[part], quote=True)
+    return (
+        f'<figure class="about-hero about-hero-{part}">'
+        f'<img src="/assets/about-mikejc-{part}.jpg?v={_ASSET_V}" alt="{alt}" '
+        f'width="1800" height="491">'
+        f"</figure>"
+    )
+
+
+def render_about_page(path: Path) -> str:
+    """Both accounts in one voice of type — the signatures carry the
+    handover, no avatars or panels; an essay in two voices, not a chat.
+
+    The portrait is cut in half and the text sits in the cut: top band,
+    text, bottom band (Mike, 2026-08-14). Requires shell(main_class="full")
+    — the bands span the page, the text carries its own column.
+    """
+    raw = path.read_text(encoding="utf-8").strip()
+    title = "About us"
+    if raw.startswith("# "):
+        head, _, raw = raw.partition("\n")
+        title = head[2:].strip()
+    return "\n".join([
+        render_about_hero("top"),
+        '<div class="column">',
+        f'<div class="piece-head"><h1>{html.escape(title)}</h1></div>',
+        f'<div class="about-voice">{_about_blocks(raw)}</div>',
+        "</div>",
+        render_about_hero("bottom"),
+    ])
 
 
 def render_markdown_page(path: Path, fallback: str) -> str:
@@ -361,6 +473,17 @@ def main() -> int:
           shell(title=f"All conversations — {SITE_TITLE}",
                 description="Every published dialogue, newest first.",
                 content=render_index_page(pieces)))
+    about_src = ROOT / "ABOUT.md"
+    if about_src.exists():
+        write(SITE / "about" / "index.html",
+              shell(title=f"About — {SITE_TITLE}",
+                    description=(
+                        "How this archive came to be — an account from Mike, "
+                        "and one from JC."
+                    ),
+                    content=render_about_page(about_src),
+                    main_class="full",
+                    canonical="/about/"))
     write(SITE / "impressum" / "index.html",
           shell(title=f"Impressum — {SITE_TITLE}", description="Impressum",
                 content=render_markdown_page(ROOT / "IMPRESSUM.md", "# Impressum\n\nContent coming soon.")))

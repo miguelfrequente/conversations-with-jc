@@ -1,6 +1,7 @@
 ---
 title: The Divine Turing Test
-date: 2026-03-28
+date: 2026-07-20
+conversation: 2026-03-28
 tldr: Could you tell the voice of God and AI apart?
 status: published
 ---

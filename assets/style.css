@@ -66,6 +66,11 @@ main { flex: 1 0 auto; width: 100%; max-width: 780px; margin: 0 auto; padding: 1
 .banner nav {
   display: flex;
   align-items: center;
+  /* Wraps rather than pushing the page wider — a third link (About,
+     2026-08-13) leaves little room on a small phone, and an overflowing
+     masthead scrolls the WHOLE document sideways. */
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
   gap: 1.5rem;
   font-family: -apple-system, "Segoe UI", sans-serif;
   font-size: 0.8rem;
@@ -111,6 +116,20 @@ header.banner.nav-hidden { transform: translateY(-100%); }
   text-transform: uppercase;
   letter-spacing: 0.16em;
 }
+/* Provenance line: the day the conversation happened, when that isn't
+   the day it was published. Quieter than the eyebrow — it dates the
+   dialogue, it doesn't headline the page. */
+.piece-head .convo-date {
+  display: block;
+  margin: -0.2rem 0 0.6rem;
+  color: var(--muted);
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+.piece-head .convo-date time { display: inline; margin: 0; font-size: inherit;
+  text-transform: none; letter-spacing: normal; }
 .piece-head h1 { margin: 0; font-size: 2.1rem; font-weight: 600; letter-spacing: -0.01em; }
 .piece-head time, .idx-date { color: var(--muted); }
 .idx-date { font-size: 0.9rem; }
@@ -245,8 +264,60 @@ html.js .dialogue .turn.in-focus .bubble { opacity: 1; }
 .idx-title:hover { text-decoration: underline; }
 .idx-tldr { margin: 0.25rem 0 0; color: var(--muted); font-style: italic; }
 
+/* --- about ----------------------------------------------------------------------- */
+/* main.full drops the column so a page can alternate bands and columns;
+   .column restores the reading measure for the text sections. The banner
+   spans the page WITHOUT vw math — a 100vw breakout adds the scrollbar's
+   width and scrolls the whole document sideways. */
+main.full { max-width: none; padding: 0; }
+main.full .column {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 4vw, 2rem) 0;
+}
+
+/* The portrait is cut across its middle and the page is read through the
+   cut: top half above the text, bottom half below. */
+.about-hero { margin: 0; }
+.about-hero-top { border-bottom: 1px solid var(--line); }
+.about-hero-bottom { margin-top: 3rem; border-top: 1px solid var(--line); }
+/* The footer's 4rem breathing room is for text ending a page — under a
+   full-bleed band it reads as a stray gap, so the closing half sits
+   flush on the footer. Scoped to pages that actually end in one. */
+main:has(.about-hero-bottom) + .footer { margin-top: 0; }
+.about-hero img {
+  display: block;
+  width: 100%;
+  /* Fixed band height — the crop is decided in the FILES (each half is
+     cut from the source), not by the viewport. */
+  height: clamp(200px, 21vw, 360px);
+  object-fit: cover;
+}
+/* Whatever the browser has to trim, it trims AWAY from the cut: the top
+   band keeps its lower edge, the bottom band its upper one, so the two
+   halves still read as one picture with the text inside it. */
+.about-hero-top img { object-position: center bottom; }
+.about-hero-bottom img { object-position: center top; }
+
+.about-voice p { margin: 0 0 1.15rem; }
+.about-sign {
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 1.5rem !important;
+}
+
+/* A signature ends a voice; the next paragraph simply begins the other
+   one. Mike, 2026-08-13: no avatar, no rule, no panel for JC's half. */
+.about-sign + p { margin-top: 2rem; }
+
+/* The closing line stays in the flow of the text — bold, nothing else
+   (Mike, 2026-08-13). It echoes the first piece; the weight is enough. */
+.about-kicker { font-weight: 700; }
+
 /* --- mobile ---------------------------------------------------------------------- */
 @media (max-width: 640px) {
+  .about-hero img { height: clamp(140px, 34vw, 220px); }
+  .about-hero-bottom { margin-top: 2rem; }
   body { font-size: 16.5px; }
   .piece-head h1 { font-size: 1.7rem; }
   .bubble { max-width: 88%; }
