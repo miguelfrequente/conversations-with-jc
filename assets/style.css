@@ -6,6 +6,10 @@
    font CDN (GDPR). */
 
 :root {
+  /* The page's Latin serif. Named because the masthead has to keep it even
+     on pages whose body font is Cyrillic, Devanagari or CJK — see
+     .banner .site-title. */
+  --serif: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
   --bg: #faf7f2;
   --ink: #2a251d;
   --muted: #7a6f60;
@@ -40,7 +44,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 18px/1.7 "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font: 18px/1.7 var(--serif);
   /* Sticky footer: main grows, footer rides the true bottom. */
   min-height: 100vh;
   display: flex;
@@ -62,7 +66,18 @@ main { flex: 1 0 auto; width: 100%; max-width: 780px; margin: 0 auto; padding: 1
 }
 .banner a { color: var(--petrol-ink); text-decoration: none; }
 .banner a:hover { text-decoration: underline; }
-.site-title { font-size: 1.6rem; font-style: italic; font-weight: 600; letter-spacing: 0.005em; }
+/* The publication's name is the same object on every page, so it is set in
+   the same face on every page. Two selectors deep on purpose: it has to
+   outrank the :lang() body fonts further down, which would otherwise
+   redraw the masthead in Songti's or Devanagari's Latin glyphs — and,
+   having no real italic, slant it by machine (Mike, 2026-09-03). */
+.banner .site-title {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
 .banner nav {
   display: flex;
   align-items: center;
@@ -314,8 +329,134 @@ main:has(.about-hero-bottom) + .footer { margin-top: 0; }
    (Mike, 2026-08-13). It echoes the first piece; the weight is enough. */
 .about-kicker { font-weight: 700; }
 
+/* --- languages -------------------------------------------------------------------- */
+/* Switcher, top right of the masthead: a plain <details>, no JavaScript.
+   It lists only the languages the current page actually exists in, and
+   renders nothing at all when there are none (build.py::_lang_switch). */
+.lang-switch { position: relative; }
+.lang-switch > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--petrol-ink);
+}
+.lang-switch > summary::-webkit-details-marker { display: none; }
+.lang-switch > summary:hover { text-decoration: underline; }
+.lang-caret { display: inline-block; font-size: 0.9em; opacity: 0.7; }
+/* The flag carries no letter-spacing and needs its own size — at nav size
+   it would read as a smudge. Windows renders the two-letter code instead
+   of the glyph, which is why the menu always names the language too. */
+.lang-flag {
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: normal;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+.lang-switch[open] .lang-caret { transform: rotate(180deg); }
+.lang-switch ul {
+  position: absolute;
+  top: calc(100% + 0.7rem);
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 0.35rem 0;
+  min-width: max-content;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.09);
+}
+.lang-switch li a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 1.2rem;
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+}
+.lang-switch li a:hover { background: var(--jc-bubble); text-decoration: none; }
+
+/* The offer to switch — filled in and shown by assets/lang.js when the
+   reader's browser asks for a language we have. Never a redirect. */
+.lang-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem 1.3rem;
+  padding: 0.7rem clamp(1rem, 4vw, 3rem);
+  background: var(--jc-bubble);
+  color: var(--jc-ink);
+  border-bottom: 1px solid var(--line);
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+}
+/* `display: flex` outranks the browser's [hidden] rule, so the bar has to
+   opt out explicitly or it shows as an empty strip before the script runs. */
+.lang-suggest[hidden] { display: none; }
+.lang-suggest a { color: var(--petrol-ink); font-weight: 600; }
+.lang-suggest button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* "Translated by JC — original in English." The site prints what was
+   actually said; a translation isn't that, and this line is what keeps the
+   claim true (Mike, 2026-09-03). Quiet, directly under the lede. */
+.translation-note {
+  margin: -1.3rem 0 2rem;
+  color: var(--muted);
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+.translation-note a { color: var(--muted); }
+
+/* The body serif carries no Devanagari and no CJK; without these the
+   browser substitutes per glyph and the type changes texture mid-sentence.
+   System faces only — a font CDN is still never an option (GDPR). */
+/* Scoped to `body`, not to every element: a bare `:lang(zh)` matches each
+   descendant DIRECTLY and so outranks the masthead's and footer's own
+   font-family, which are inherited. The nav then lost its sans-serif, and
+   the switcher redrew "Deutsch" in a different face on every locale
+   (Mike, 2026-09-03). The reading column inherits from body as intended;
+   the chrome keeps the stack it declares for itself. */
+body:lang(ru), body:lang(uk) { font-family: Georgia, "Palatino Linotype", "Times New Roman", serif; }
+body:lang(hi) { font-family: "Noto Serif Devanagari", "Kohinoor Devanagari", "Devanagari MT", "Nirmala UI", serif; }
+body:lang(zh) { font-family: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "Microsoft YaHei", serif; }
+
+/* Neither script has a true italic; the browser slants the upright face
+   instead, which reads as distortion rather than as emphasis. Keep the
+   muted colour that already carries the lede and the notes, drop the tilt,
+   and give inline emphasis each script's own convention: weight for
+   Devanagari, emphasis dots for Chinese. */
+:lang(hi) .lede, :lang(zh) .lede,
+:lang(hi) .narration, :lang(zh) .narration,
+:lang(hi) .convo-date, :lang(zh) .convo-date,
+:lang(hi) .translation-note, :lang(zh) .translation-note,
+:lang(hi) .about-sign, :lang(zh) .about-sign,
+:lang(hi) em, :lang(zh) em { font-style: normal; }
+:lang(hi) em { font-weight: 600; }
+:lang(zh) em {
+  -webkit-text-emphasis: dot;
+  text-emphasis: dot;
+  -webkit-text-emphasis-position: under right;
+  text-emphasis-position: under right;
+}
+
 /* --- mobile ---------------------------------------------------------------------- */
 @media (max-width: 640px) {
+  .lang-switch ul { max-width: 70vw; }
   .about-hero img { height: clamp(140px, 34vw, 220px); }
   .about-hero-bottom { margin-top: 2rem; }
   body { font-size: 16.5px; }
