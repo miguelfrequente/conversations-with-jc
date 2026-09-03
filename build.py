@@ -149,6 +149,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "Coming soon",
         "coming_soon_body": "The first conversation is on its way.",
         "lang_label": "Language",
+        "no_translation": "This conversation isn’t in English yet — open the index",
         # The bar also sits on the index and the about page, so it says
         # "page", not "conversation".
         "suggest": "This page is also available in English.",
@@ -171,6 +172,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "Demnächst",
         "coming_soon_body": "Das erste Gespräch ist unterwegs.",
         "lang_label": "Sprache",
+        "no_translation": "Dieses Gespräch gibt es noch nicht auf Deutsch — zur Übersicht",
         "suggest": "Diese Seite gibt es auch auf Deutsch.",
         "suggest_go": "Lesen",
         "suggest_dismiss": "Ausblenden",
@@ -191,6 +193,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "Muy pronto",
         "coming_soon_body": "La primera conversación está en camino.",
         "lang_label": "Idioma",
+        "no_translation": "Esta conversación aún no está en español — ir al índice",
         "suggest": "Esta página también está disponible en español.",
         "suggest_go": "Leer",
         "suggest_dismiss": "Descartar",
@@ -211,6 +214,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "Скоро",
         "coming_soon_body": "Первый разговор уже в пути.",
         "lang_label": "Язык",
+        "no_translation": "Этого разговора ещё нет на русском — открыть список",
         "suggest": "Эта страница также доступна на русском.",
         "suggest_go": "Читать",
         "suggest_dismiss": "Скрыть",
@@ -231,6 +235,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "Незабаром",
         "coming_soon_body": "Перша розмова вже в дорозі.",
         "lang_label": "Мова",
+        "no_translation": "Цієї розмови ще немає українською — відкрити перелік",
         "suggest": "Ця сторінка також доступна українською.",
         "suggest_go": "Читати",
         "suggest_dismiss": "Сховати",
@@ -251,6 +256,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "जल्द आ रहा है",
         "coming_soon_body": "पहली बातचीत रास्ते में है।",
         "lang_label": "भाषा",
+        "no_translation": "यह बातचीत अभी हिन्दी में नहीं है — सूची खोलें",
         "suggest": "यह पृष्ठ हिन्दी में भी उपलब्ध है।",
         "suggest_go": "पढ़ें",
         "suggest_dismiss": "बंद करें",
@@ -271,6 +277,7 @@ UI: dict[str, dict[str, str]] = {
         "coming_soon": "即将上线",
         "coming_soon_body": "第一次对话即将到来。",
         "lang_label": "语言",
+        "no_translation": "这次对话还没有中文版本 — 打开目录",
         "suggest": "本页面也有中文版本。",
         "suggest_go": "阅读",
         "suggest_dismiss": "关闭",
@@ -583,21 +590,40 @@ def _asset_version() -> str:
 _ASSET_V = None  # computed once per build in main()
 
 
-def _lang_switch(lang: str, versions: dict[str, str]) -> str:
+def _lang_switch(lang: str, versions: dict[str, str], locales: list[str]) -> str:
     """Top-right switcher: a <details> dropdown, no JavaScript.
 
-    Only languages this page actually EXISTS in are listed — a switcher
-    that can drop a reader on a 404 is worse than no switcher. With nothing
-    to switch to it renders nothing at all.
+    EVERY language the site publishes is listed, always — the switcher is
+    masthead furniture, not page metadata. It first shipped listing only
+    the languages a page already existed in, which meant the control
+    disappeared entirely from a freshly published piece whose translations
+    hadn't landed yet: the reader loses the way to the other languages, and
+    the masthead changes shape from page to page (Mike, 2026-09-03).
+
+    A language that doesn't have THIS page yet still isn't a dead end — it
+    links to that language's index and says so on hover.
     """
-    others = {c: u for c, u in versions.items() if c != lang}
+    others = [c for c in locales if c != lang]
     if not others:
         return ""
+
+    def entry(code: str) -> str:
+        url, extra = versions.get(code), ""
+        if url is None:  # published in this language, but not this piece
+            url = f"{lang_root(code)}/conversations/"
+            extra = (
+                f' class="lang-elsewhere" '
+                f'title="{html.escape(t(code, "no_translation"), quote=True)}"'
+            )
+        return (
+            f'<li><a href="{url}" lang="{LANGUAGES[code][0]}" '
+            f'hreflang="{LANGUAGES[code][0]}"{extra}>'
+            f'<span class="lang-flag" aria-hidden="true">{LANGUAGES[code][2]}</span>'
+            f"{html.escape(LANGUAGES[code][1])}</a></li>"
+        )
+
     items = "".join(
-        f'<li><a href="{u}" lang="{LANGUAGES[c][0]}" hreflang="{LANGUAGES[c][0]}">'
-        f'<span class="lang-flag" aria-hidden="true">{LANGUAGES[c][2]}</span>'
-        f"{html.escape(LANGUAGES[c][1])}</a></li>"
-        for c, u in sorted(others.items(), key=lambda kv: list(LANGUAGES).index(kv[0]))
+        entry(c) for c in sorted(others, key=lambda c: list(LANGUAGES).index(c))
     )
     # The button is the flag alone — one glyph, so the masthead stays on one
     # row even on a phone. The language it stands for is in the aria-label,
@@ -640,6 +666,7 @@ def shell(
     *, title: str, description: str, content: str, canonical: str = "",
     main_class: str = "", lang: str = DEFAULT_LANG,
     versions: dict[str, str] | None = None,
+    locales: list[str] | None = None,
 ) -> str:
     """`main_class="full"` drops the text-column constraint so a page can
     alternate full-width bands with `.column` sections — the about page's
@@ -647,10 +674,13 @@ def shell(
     inside the column would need a 100vw breakout, which adds the
     scrollbar's width and hands every desktop a horizontal scrollbar.
 
-    `versions` maps language code → URL for THIS page. It drives the
-    switcher, the hreflang alternates and the suggestion bar.
+    `versions` maps language code → URL for THIS page: it drives the
+    hreflang alternates and the suggestion bar, both of which may only
+    name pages that exist. `locales` is every language the SITE publishes
+    and drives the switcher, which lists all of them regardless.
     """
     versions = versions or {lang: canonical}
+    locales = locales or list(versions)
     root = lang_root(lang)
     canonical_tag = (
         f'\n  <link rel="canonical" href="{BASE_URL}{canonical}">' if BASE_URL and canonical else ""
@@ -689,7 +719,7 @@ def shell(
     <a href="{root}/conversations/">{html.escape(t(lang, "nav_all"))}</a>
     <a href="{root}/about/">{html.escape(t(lang, "nav_about"))}</a>
     <a href="{X_URL}" rel="me noopener" target="_blank" aria-label="My Conversations with JC on X">{_X_LOGO_SVG}</a>
-    {_lang_switch(lang, versions)}
+    {_lang_switch(lang, versions, locales)}
   </nav>
 </header>
 {_suggest_bar(lang, versions)}
@@ -1033,7 +1063,8 @@ def build_locale(lang: str, views: list, languages: list[str]) -> None:
             shell(title=f"{piece.title} — {SITE_TITLE}", description=piece.tldr,
                   content=render_piece_page(piece, prev, nxt,
                                             related_for(piece, prev, nxt)),
-                  canonical=piece.url, lang=lang, versions=piece.versions()),
+                  canonical=piece.url, lang=lang, versions=piece.versions(),
+                  locales=languages),
         )
 
     # Homepage = the latest conversation (decided 2026-07-16); canonical
@@ -1052,13 +1083,13 @@ def build_locale(lang: str, views: list, languages: list[str]) -> None:
     write(out / "index.html",
           shell(title=SITE_TITLE, description=home_desc, content=home,
                 canonical=(views[-1].url if views else ""),
-                lang=lang, versions=home_versions))
+                lang=lang, versions=home_versions, locales=languages))
 
     write(out / "conversations" / "index.html",
           shell(title=f'{t(lang, "index_title")} — {SITE_TITLE}',
                 description=t(lang, "index_desc"),
                 content=render_index_page(views, lang),
-                canonical=f"{root}/conversations/", lang=lang,
+                canonical=f"{root}/conversations/", lang=lang, locales=languages,
                 versions={c: f"{lang_root(c)}/conversations/" for c in languages}))
 
     about_src = about_source(lang)
@@ -1068,6 +1099,7 @@ def build_locale(lang: str, views: list, languages: list[str]) -> None:
                     description=t(lang, "about_desc"),
                     content=render_about_page(about_src, lang),
                     main_class="full", canonical=f"{root}/about/", lang=lang,
+                    locales=languages,
                     versions={c: f"{lang_root(c)}/about/" for c in languages
                               if about_source(c).exists()}))
 
@@ -1094,6 +1126,11 @@ def main() -> int:
             else [p.translations[lang] for p in pieces if lang in p.translations]
         )
         build_locale(lang, views, languages)
+        if lang != DEFAULT_LANG and len(views) < len(pieces):
+            # Visible in the build log, because the reader sees it too: the
+            # switcher offers this language on every page, and on the ones
+            # it hasn't reached yet the link goes to its index.
+            print(f"    {len(pieces) - len(views)} piece(s) not yet in {lang}")
         if lang != DEFAULT_LANG:
             print(f"  {lang}: {len(views)}/{len(pieces)} piece(s)")
 
@@ -1107,7 +1144,7 @@ def main() -> int:
                 content='<div lang="de">' + render_markdown_page(
                     ROOT / "IMPRESSUM.md", "# Impressum\n\nContent coming soon.",
                 ) + "</div>",
-                canonical="/impressum/"))
+                canonical="/impressum/", locales=languages))
     # GitHub Pages custom-domain marker — must ship inside the artifact.
     write(SITE / "CNAME", DOMAIN + "\n")
     shutil.copytree(ASSETS, SITE / "assets")
