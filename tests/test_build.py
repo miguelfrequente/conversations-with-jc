@@ -162,13 +162,48 @@ def test_unknown_original_language_is_refused(site):
 
 # --- switcher, hreflang, dates ---------------------------------------------------
 
-def test_switcher_offers_only_languages_that_exist():
+def test_switcher_links_straight_to_the_translated_page():
     versions = {"en": "/piece/x/", "de": "/de/piece/x/"}
-    markup = build._lang_switch("en", versions)
+    markup = build._lang_switch("en", versions, ["en", "de"])
     assert 'href="/de/piece/x/"' in markup
-    assert "Español" not in markup
-    # Nothing to switch to renders nothing at all — no dead ends.
-    assert build._lang_switch("en", {"en": "/piece/x/"}) == ""
+    assert "Español" not in markup  # a locale the site doesn't publish
+    # A site with one language has nothing to switch between.
+    assert build._lang_switch("en", {"en": "/piece/x/"}, ["en"]) == ""
+
+
+def test_the_switcher_survives_a_piece_that_has_no_translations_yet():
+    """It first shipped listing only the languages a page existed in, so on
+    a freshly published piece the control vanished from the masthead
+    entirely — which reads as the feature being broken, and leaves the
+    reader no way to the other languages (Mike, 2026-09-03)."""
+    markup = build._lang_switch("en", {"en": "/piece/new/"}, ["en", "de", "zh"])
+    assert "Deutsch" in markup and "中文" in markup
+    # …pointing at each language's index rather than a 404,
+    assert 'href="/de/conversations/"' in markup
+    assert 'href="/zh/conversations/"' in markup
+    # …saying so, in that language, and rendered quieter.
+    assert "noch nicht auf Deutsch" in markup
+    assert markup.count("lang-elsewhere") == 2
+
+
+def test_a_page_that_exists_everywhere_has_no_quiet_entries():
+    markup = build._lang_switch(
+        "en", {"en": "/piece/x/", "de": "/de/piece/x/"}, ["en", "de"],
+    )
+    assert "lang-elsewhere" not in markup
+
+
+def test_hreflang_still_names_only_pages_that_exist(tmp_path):
+    """The switcher lists every language; hreflang must not — pointing a
+    search engine at a page that isn't there is a different promise."""
+    page = build.shell(
+        title="t", description="d", content="", canonical="/piece/new/",
+        versions={"en": "/piece/new/"}, locales=["en", "de", "zh"],
+    )
+    import re
+    alternates = re.findall(r'<link rel="alternate" hreflang="([^"]+)"', page)
+    assert alternates == ["en"]  # no promise about a page that isn't there
+    assert "Deutsch" in page     # …but the switcher still offers the language
 
 
 def test_emphasis_works_in_a_script_without_spaces():
@@ -197,9 +232,11 @@ def test_the_flag_never_travels_alone():
     is where that stings. So the button carries the flag, and the language
     is always named beside it: in the menu, and in the button's aria-label
     for anyone the picture doesn't reach."""
-    markup = build._lang_switch("de", {
-        "en": "/piece/x/", "de": "/de/piece/x/", "uk": "/uk/piece/x/",
-    })
+    markup = build._lang_switch(
+        "de",
+        {"en": "/piece/x/", "de": "/de/piece/x/", "uk": "/uk/piece/x/"},
+        ["en", "de", "uk"],
+    )
     assert "🇩🇪" in markup and 'aria-label="Sprache: Deutsch"' in markup
     assert "🇺🇦" in markup and "Українська" in markup
     assert "🇬🇧" in markup and "English" in markup

@@ -379,6 +379,11 @@ main:has(.about-hero-bottom) + .footer { margin-top: 0; }
   white-space: nowrap;
 }
 .lang-switch li a:hover { background: var(--jc-bubble); text-decoration: none; }
+/* A language the site publishes but THIS page hasn't reached yet: still
+   listed, still a real destination (that language's index), just quieter —
+   the alternative was the control vanishing from the masthead entirely. */
+.lang-switch li a.lang-elsewhere { color: var(--muted); }
+.lang-switch li a.lang-elsewhere .lang-flag { opacity: 0.55; }
 
 /* The offer to switch — filled in and shown by assets/lang.js when the
    reader's browser asks for a language we have. Never a redirect. */
